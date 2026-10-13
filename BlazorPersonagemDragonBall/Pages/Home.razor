@@ -1,0 +1,89 @@
+@page "/"
+@using System.Net
+@using BlazorPersonagemDragonBall.Models
+@inject HttpClient Http
+
+<PageTitle>Home</PageTitle>
+
+<h1>Consulta Personagem Dragon Ball</h1>
+
+<div>
+    <label for="idInput">Id do Personagem</label>
+    <input type="number" class="form-control" id="idInput" @bind="id" placeholder="Digite o id do personagem">
+</div>
+<button class="btn btn-primary mt-2" @onclick="ConsultaPersonagem">Consultar</button>
+
+@if (personagem != null)
+{
+    <h3 class="mt-4">Informações do Personagem</h3>
+    <p><strong>Nome:</strong> @personagem.Nome</p>
+    <p><strong>Planeta de Origem:</strong> @personagem.PlanetaOrigem?.Nome</p>
+
+    <h4>Transformações:</h4>
+    @if (personagem.Transformacoes.Count > 0)
+    {
+        <ul>
+            @foreach (var transformacao in personagem.Transformacoes)
+            {
+                <li>@transformacao.Nome</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>Este personagem não possui transformações.</p>
+    }
+}
+@if (!string.IsNullOrEmpty(errorMenssage))
+{
+    <div class="alert alert-danger mt-4">
+        @errorMenssage
+    </div>
+}
+
+@code {
+    private int? id;
+    private Personagem? personagem;
+    private string? errorMenssage;
+
+    private async Task ConsultaPersonagem()
+    {
+        errorMenssage = string.Empty;
+        personagem = null;
+
+        if (id == null)
+        {
+            errorMenssage = "Por favor, digite o id do personagem.";
+            return;
+        }
+
+        if (id <= 0)
+        {
+            errorMenssage = "O id deve ser um número maior que zero.";
+            return;
+        }
+
+        try
+        {
+            var url = $"https://dragonball-api.com/api/characters/{id}";
+            personagem = await Http.GetFromJsonAsync<Personagem>(url);
+            if (personagem?.Nome == null)
+            {
+                personagem = null;
+                errorMenssage = "Personagem não encontrado.";
+            }
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
+        {
+            errorMenssage = "Personagem não encontrado ou id inválido.";
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMenssage = $"Erro ao conectar à API: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMenssage = $"Ocorreu um erro: {ex.Message}";
+        }
+    }
+}
